@@ -40,6 +40,7 @@ contract SideEntranceLenderPool {
         uint256 balanceBefore = address(this).balance;
 
         IFlashLoanEtherReceiver(msg.sender).execute{value: amount}();
+        // by depositing the flash loan in execute, we ensure that the contract balance remains the same while enabling access to these funds afterwards
 
         if (address(this).balance < balanceBefore)
             revert RepayFailed();
