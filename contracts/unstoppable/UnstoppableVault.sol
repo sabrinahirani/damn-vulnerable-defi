@@ -16,7 +16,7 @@ contract UnstoppableVault is IERC3156FlashLender, ReentrancyGuard, Owned, ERC462
     using FixedPointMathLib for uint256;
 
     uint256 public constant FEE_FACTOR = 0.05 ether;
-    uint64 public constant GRACE_PERIOD = 30 days;
+    uint64 public constant GRACE_PERIOD = 30 days; 
 
     uint64 public immutable end = uint64(block.timestamp) + GRACE_PERIOD;
 
@@ -90,19 +90,28 @@ contract UnstoppableVault is IERC3156FlashLender, ReentrancyGuard, Owned, ERC462
         uint256 amount,
         bytes calldata data
     ) external returns (bool) {
+
         if (amount == 0) revert InvalidAmount(0); // fail early
         if (address(asset) != _token) revert UnsupportedCurrency(); // enforce ERC3156 requirement
+        
         uint256 balanceBefore = totalAssets();
         if (convertToShares(totalSupply) != balanceBefore) revert InvalidBalance(); // enforce ERC4626 requirement
+        // note: ERC4626 inherits ERC20 — totalSupply is only maintained if funds are added to the vault using contract methods
+        // by sending tokens directly to the vault contract, we produce an accounting error which causes the above check to revert no matter what
+
         uint256 fee = flashFee(_token, amount);
+
         // transfer tokens out + execute callback on receiver
         ERC20(_token).safeTransfer(address(receiver), amount);
+
         // callback must return magic value, otherwise assume it failed
-        if (receiver.onFlashLoan(msg.sender, address(asset), amount, fee, data) != keccak256("IERC3156FlashBorrower.onFlashLoan"))
+        if (receiver.onFlashLoan(msg.sender, address(asset), amount, fee, data) != keccak256("IERC3156FlashBorrower.onFlashLoan")) // note: ensure callback function executes — funds approved
             revert CallbackFailed();
+
         // pull amount + fee from receiver, then pay the fee to the recipient
         ERC20(_token).safeTransferFrom(address(receiver), address(this), amount + fee);
         ERC20(_token).safeTransfer(feeRecipient, fee);
+
         return true;
     }
 
