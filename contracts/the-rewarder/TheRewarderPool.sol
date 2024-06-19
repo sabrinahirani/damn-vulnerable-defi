@@ -78,6 +78,7 @@ contract TheRewarderPool {
         uint256 totalDeposits = accountingToken.totalSupplyAt(lastSnapshotIdForRewards);
         uint256 amountDeposited = accountingToken.balanceOfAt(msg.sender, lastSnapshotIdForRewards);
 
+        // note: implementation does not consider duration — we can use a flash loan to get rewards
         if (amountDeposited > 0 && totalDeposits > 0) {
             rewards = amountDeposited.mulDiv(REWARDS, totalDeposits);
             if (rewards > 0 && !_hasRetrievedReward(msg.sender)) {
